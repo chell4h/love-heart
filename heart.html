@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heart Universe</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #030305;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Consolas, monospace;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+.caption {
+    position: fixed;
+    bottom: 35px;
+    color: #ff3158;
+    letter-spacing: 5px;
+    font-size: 12px;
+    text-shadow: 0 0 15px red;
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+    from { opacity: .55; }
+    to { opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+<div class="caption">A HEART MADE OF WORDS ♥</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let W, H, cx, cy, scale;
+let particles = [];
+let startTime = performance.now();
+
+const words = [
+    "I LOVE YOU",
+    "MY LOVE",
+    "FOREVER",
+    "MY HEART",
+    "ONLY YOU",
+    "YOU ARE MY WORLD",
+    "MY EVERYTHING",
+    "ALWAYS YOU",
+    "MY BABY",
+    "LOVE YOU"
+];
+
+function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    cx = W / 2;
+    cy = H / 2;
+
+    scale = Math.min(W * 0.29, H * 0.34);
+
+    createHeart();
+}
+
+function heartPoint(t) {
+    return {
+        x: 16 * Math.pow(Math.sin(t), 3),
+        y: 13 * Math.cos(t)
+           - 5 * Math.cos(2 * t)
+           - 2 * Math.cos(3 * t)
+           - Math.cos(4 * t)
+    };
+}
+
+function createHeart() {
+    particles = [];
+
+    // Points follow the heart outline in order
+    const count = 220;
+
+    for (let i = 0; i < count; i++) {
+        const t = (i / count) * Math.PI * 2;
+        const p = heartPoint(t);
+
+        particles.push({
+            x: p.x / 17,
+            y: -p.y / 17,
+            angle: t,
+            delay: i * 0.012,
+            word: words[i % words.length],
+            size: 9 + Math.random() * 3
+        });
+    }
+
+    // Fill the inside of the heart
+    for (let i = 0; i < 440; i++) {
+        const t = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random());
+        const p = heartPoint(t);
+
+        particles.push({
+            x: (p.x / 17) * r,
+            y: (-p.y / 17) * r,
+            angle: t,
+            delay: 2.7 + i * 0.004,
+            word: words[Math.floor(Math.random() * words.length)],
+            size: 8 + Math.random() * 3
+        });
+    }
+}
+
+function draw(now) {
+    const time = (now - startTime) / 1000;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#030305";
+    ctx.fillRect(0, 0, W, H);
+
+    // Slow, continuous circular rotation
+   const stopTime = 12; // الوقت قبل ما يبدا يوقف
+const initialSpeed = 0.35;
+const deceleration = 0.12;
+
+const rotation =
+    initialSpeed *
+    (time <= stopTime
+        ? time
+        : stopTime +
+          (1 - Math.exp(-deceleration * (time - stopTime)))
+          / deceleration);
+
+    // Gentle heartbeat
+    const pulse = 1 + 0.035 * Math.sin(time * 2.8);
+
+    for (const p of particles) {
+        const progress = Math.max(
+            0,
+            Math.min(1, (time - p.delay) / 1.1)
+        );
+
+        if (progress <= 0) continue;
+
+        // Assemble from a circular orbit into the heart
+        const orbitAngle = p.angle + time * 1.1;
+        const orbitRadius = scale * (1.15 + 0.25 * Math.sin(p.angle * 3));
+
+        const orbitX = Math.cos(orbitAngle) * orbitRadius;
+        const orbitY = Math.sin(orbitAngle) * orbitRadius;
+
+        const hx = p.x * scale * pulse;
+        const hy = p.y * scale * pulse;
+
+        const x = cx + orbitX * (1 - progress)
+                    + (hx * Math.cos(rotation) - hy * Math.sin(rotation)) * progress;
+
+        const y = cy + orbitY * (1 - progress)
+                    + (hx * Math.sin(rotation) + hy * Math.cos(rotation)) * progress;
+
+        ctx.save();
+
+        ctx.globalAlpha = progress;
+        ctx.font = `bold ${p.size}px Consolas, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.shadowColor = "#ff003c";
+        ctx.shadowBlur = 9;
+
+        ctx.fillStyle = Math.random() > 0.97
+            ? "#ffffff"
+            : (Math.random() > 0.5 ? "#ff1744" : "#ff4569");
+
+        ctx.fillText(p.word, x, y);
+
+        ctx.restore();
+    }
+
+    requestAnimationFrame(draw);
+}
+
+window.addEventListener("resize", resize);
+
+resize();
+requestAnimationFrame(draw);
+</script>
+
+</body>
+</html>
